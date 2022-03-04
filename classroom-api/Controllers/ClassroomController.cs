@@ -135,8 +135,6 @@ namespace classroom_api.Controllers
                     course.CourseState = model.CourseState;
                 }
             }
-
-
             course = classroomService.Courses.Update(course, id).Execute();
             return Ok(course);
         }
