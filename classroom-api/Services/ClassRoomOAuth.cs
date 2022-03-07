@@ -10,7 +10,7 @@ namespace classroom_api.Services
     {
         // If modifying these scopes, delete your previously saved credentials
         // at ~/.credentials/classroom.googleapis.com-dotnet-quickstart.json
-        static string[] Scopes = { ClassroomService.Scope.ClassroomCourses };
+        static string[] Scopes = { ClassroomService.Scope.ClassroomCourses,ClassroomService.Scope.ClassroomRosters };
         static string ApplicationName = "Classroom API .NET Quickstart";
         public static ClassroomService GetClassroomService()
         {
@@ -25,7 +25,7 @@ namespace classroom_api.Services
                 credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                     GoogleClientSecrets.Load(stream).Secrets,
                     Scopes,
-                    "user", //от этой штуки зависит, с каким именем токен сохранится/считает
+                    "user1", //от этой штуки зависит, с каким именем токен сохранится/считает
                     CancellationToken.None,
                     new FileDataStore(credPath, true)).Result;
                 Console.WriteLine("Credential file saved to: " + credPath);

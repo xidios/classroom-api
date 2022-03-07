@@ -5,6 +5,7 @@ using Google.Apis.Classroom.v1.Data;
 using System.Net;
 using classroom_api.Models;
 using classroom_api.Enums;
+using Google;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -16,6 +17,19 @@ namespace classroom_api.Controllers
     {
         private ClassroomService classroomService = ClassRoomOAuth.GetClassroomService();
 
+        [HttpGet("info/{userId}")]
+        public ActionResult GetUserInformation(string userId)
+        {
+            try
+            {
+                UserProfile user = classroomService.UserProfiles.Get(userId).Execute();
+                return Ok(user);
+            }
+            catch
+            {
+                return BadRequest("Some problems with this user");
+            }
+        }
         [HttpGet("list")]
         public ActionResult<IEnumerable<Course>> GetClassroomList()
         {
@@ -100,7 +114,6 @@ namespace classroom_api.Controllers
             }
             return true;
         }
-        //228167871823
         [HttpPatch("update/{id}")]
         public ActionResult<Course> UpdateClassroom(string id, [FromBody] ClassroomModel model)
         {
@@ -137,6 +150,53 @@ namespace classroom_api.Controllers
             }
             course = classroomService.Courses.Update(course, id).Execute();
             return Ok(course);
+        }
+        [HttpPost("invite/students")]
+        public ActionResult<List<Student>> InviteStudents([FromBody] InviteModel model)
+        {
+            return InviteToClassroomByRole(model, "STUDENT");
+        }
+        [HttpPost("invite/teachers")]
+        public ActionResult<List<Teacher>> InviteTeachers([FromBody] InviteModel model)
+        {
+            return InviteToClassroomByRole(model, "TEACHER");
+        }
+        private ActionResult InviteToClassroomByRole(InviteModel model, string role)
+        {
+            if (model.CourseId == null)
+            {
+                return BadRequest("Course id is empty");
+            }
+
+            if (model.AccountIdList.Count() == 0)
+            {
+                return BadRequest("Empty student list");
+            }
+
+            List<string> invitations = new List<string>();
+            string textResponse = "";
+            foreach (string accountId in model.AccountIdList)
+            {
+                try
+                {
+                    Invitation invite = new Invitation
+                    {
+                        CourseId = model.CourseId,
+                        UserId = accountId,
+                        Role = role
+                    };
+                    textResponse = accountId;
+                    var inviteResponse = classroomService.Invitations.Create(invite).Execute();
+                    textResponse += " Invited";
+                    invitations.Add(textResponse);
+                }
+                catch (GoogleApiException e)
+                {
+                    textResponse += " " + e.Error.Message;
+                    invitations.Add(textResponse);
+                }
+            }
+            return Ok(invitations);
         }
     }
 }
