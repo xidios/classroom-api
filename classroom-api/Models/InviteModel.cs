@@ -10,4 +10,8 @@ namespace classroom_api.Models
         public List<string> AccountIdList { get; set; }
         
     }
+    public class InviteDeleteModel
+    {
+        public List<string> InviteId { get; set; }
+    }
 }

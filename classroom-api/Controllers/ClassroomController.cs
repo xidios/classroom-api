@@ -6,6 +6,7 @@ using System.Net;
 using classroom_api.Models;
 using classroom_api.Enums;
 using Google;
+using System;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -16,7 +17,43 @@ namespace classroom_api.Controllers
     public class ClassroomController : ControllerBase
     {
         private ClassroomService classroomService = ClassRoomOAuth.GetClassroomService();
+        #region HTTP_GET
 
+        [HttpGet("list")]
+        public ActionResult<List<Course>> GetClassroomList()
+        {
+            using (ClassroomapiContext context = new ClassroomapiContext())
+            {
+                var student = context.Students.SingleOrDefault(s => s.AccountId == userId || s.Email == userId);
+                if (student == null)
+                {
+                    return BadRequest("Student not found");
+                }
+                return Ok(student.Courses);
+            }
+        }
+        [HttpGet("info/{userId}")]
+        public ActionResult GetUserInformation(string userId)
+        {
+            try
+            {
+                UserProfile user = classroomService.UserProfiles.Get(userId).Execute();
+                return Ok(user);
+            }
+            catch
+            {
+                return BadRequest("Some problems with this user");
+            }
+        }
+
+
+        #endregion
+    }
+    class ClassroomControllerOld : ControllerBase
+    {
+        private ClassroomService classroomService = ClassRoomOAuth.GetClassroomService();
+
+        #region HttpGet
         [HttpGet("info/{userId}")]
         public ActionResult GetUserInformation(string userId)
         {
@@ -33,27 +70,18 @@ namespace classroom_api.Controllers
         [HttpGet("list")]
         public ActionResult<IEnumerable<Course>> GetClassroomList()
         {
-            CoursesResource.ListRequest request = classroomService.Courses.List();
-            ListCoursesResponse response = request.Execute();
-
-            return Ok(response.Courses);
+            return Ok(GetCoursesByCourseState(null));
         }
 
         [HttpGet("list/active")]
-        public ActionResult<IEnumerable<Course>> GetClassroomActiveList()
+        public ActionResult<List<Course>> GetClassroomActiveList()
         {
-            CoursesResource.ListRequest request = classroomService.Courses.List();
-            ListCoursesResponse response = request.Execute();
-
-            return Ok(response.Courses.Where(c => c.CourseState == "ACTIVE"));
+            return Ok(GetCoursesByCourseState("ACTIVE"));
         }
         [HttpGet("list/archived")]
-        public ActionResult<IEnumerable<Course>> GetClassroomArchivedList()
+        public ActionResult<List<Course>> GetClassroomArchivedList()
         {
-            CoursesResource.ListRequest request = classroomService.Courses.List();
-            ListCoursesResponse response = request.Execute();
-
-            return Ok(response.Courses.Where(c => c.CourseState == "ARCHIVED"));
+            return Ok(GetCoursesByCourseState("ARCHIVED"));
         }
 
         [HttpGet("{id}")]
@@ -70,6 +98,78 @@ namespace classroom_api.Controllers
             }
         }
 
+        [HttpGet("stats")]
+        public ActionResult<StatisticModel> GetTechStatistic()
+        {
+            return Ok("Will be later");
+        }
+
+        [HttpGet("invite/delete/{invitationId}")]
+        public ActionResult<Invitation> DeleteInvitation(string invitationId)
+        {
+            if (invitationId == null)
+            {
+                BadRequest("Invitation id is empty");
+            }
+            try
+            {
+                var invitationResponse = classroomService.Invitations.Delete(invitationId).Execute();
+                return Ok(invitationResponse);
+            }
+            catch (GoogleApiException e)
+            {
+                if (e.HttpStatusCode == HttpStatusCode.NotFound)
+                {
+                    return BadRequest("Invitation not found");
+                }
+                return BadRequest("Some problems with invitation");
+            }
+        }
+
+        [HttpGet("invite/{invitationId}")]
+        public ActionResult<Invitation> GetInvitation(string invitationId)
+        {
+            if (invitationId == null)
+            {
+                BadRequest("Invitation id is empty");
+            }
+            try
+            {
+                var invitationResponse = classroomService.Invitations.Get(invitationId).Execute();
+                return Ok(invitationResponse);
+            }
+            catch (GoogleApiException e)
+            {
+                if (e.HttpStatusCode == HttpStatusCode.NotFound)
+                {
+                    return BadRequest("Invitation not found");
+                }
+                return BadRequest("Some problems with invitation");
+            }
+        }
+        [HttpGet("tasks")]
+        public ActionResult<List<CourseWork>> CheckCourseworks()
+        {
+            List<CourseWork> courseWorksList = new List<CourseWork>();
+            IList<Course> activeCourses = GetCoursesByCourseState("ACTIVE");
+
+            if (activeCourses == null)
+            {
+                return BadRequest("Active courses are NULL");
+            }
+
+            foreach (var course in activeCourses)
+            {
+                var courseWorksResponse = classroomService.Courses.CourseWork.List(course.Id).Execute();
+                var courseWorks = courseWorksResponse.CourseWork;
+                courseWorksList.AddRange(courseWorks);
+            }
+            return Ok(courseWorksList);
+        }
+
+        #endregion
+
+        #region HttpPost
         [HttpPost("create")]
         public ActionResult<Course> CreateClassroomCourse([FromBody] ClassroomModel model)
         {
@@ -98,22 +198,21 @@ namespace classroom_api.Controllers
             }
             return Ok(course);
         }
-        private bool CheckClassroomState(string? classroomStatus)
+        [HttpPost("invite/students")]
+        public ActionResult<List<Student>> InviteStudents([FromBody] InviteModel model)
         {
-            if (classroomStatus == null)
-            {
-                return false;
-            }
-            var enumParams = Enum.GetNames(typeof(CourseStateEnum));
-
-            string? a = enumParams.FirstOrDefault(p => p.ToLower() == classroomStatus.ToLower());
-
-            if (a == null)
-            {
-                return false;
-            }
-            return true;
+            return InviteToClassroomByRole(model, "STUDENT");
         }
+        [HttpPost("invite/teachers")]
+        public ActionResult<List<Teacher>> InviteTeachers([FromBody] InviteModel model)
+        {
+            return InviteToClassroomByRole(model, "TEACHER");
+        }
+
+        #endregion
+
+        #region HttpPatch
+
         [HttpPatch("update/{id}")]
         public ActionResult<Course> UpdateClassroom(string id, [FromBody] ClassroomModel model)
         {
@@ -151,16 +250,26 @@ namespace classroom_api.Controllers
             course = classroomService.Courses.Update(course, id).Execute();
             return Ok(course);
         }
-        [HttpPost("invite/students")]
-        public ActionResult<List<Student>> InviteStudents([FromBody] InviteModel model)
+
+        #endregion
+
+        private bool CheckClassroomState(string? classroomStatus)
         {
-            return InviteToClassroomByRole(model, "STUDENT");
+            if (classroomStatus == null)
+            {
+                return false;
+            }
+            var enumParams = Enum.GetNames(typeof(CourseStateEnum));
+
+            string? a = enumParams.FirstOrDefault(p => p.ToLower() == classroomStatus.ToLower());
+
+            if (a == null)
+            {
+                return false;
+            }
+            return true;
         }
-        [HttpPost("invite/teachers")]
-        public ActionResult<List<Teacher>> InviteTeachers([FromBody] InviteModel model)
-        {
-            return InviteToClassroomByRole(model, "TEACHER");
-        }
+
         private ActionResult InviteToClassroomByRole(InviteModel model, string role)
         {
             if (model.CourseId == null)
@@ -187,7 +296,7 @@ namespace classroom_api.Controllers
                     };
                     textResponse = accountId;
                     var inviteResponse = classroomService.Invitations.Create(invite).Execute();
-                    textResponse += " Invited";
+                    textResponse += " Invited" + " Invitation Id: " + inviteResponse.Id;
                     invitations.Add(textResponse);
                 }
                 catch (GoogleApiException e)
@@ -198,5 +307,18 @@ namespace classroom_api.Controllers
             }
             return Ok(invitations);
         }
-    }
+
+        private IList<Course> GetCoursesByCourseState(string? courseState)
+        {
+            CoursesResource.ListRequest request = classroomService.Courses.List();
+            ListCoursesResponse response = request.Execute();
+
+            if (courseState == null)
+            {
+                return response.Courses;
+            }
+
+            return response.Courses.Where(c => c.CourseState == courseState).ToList();
+        }
+    } //OLD
 }

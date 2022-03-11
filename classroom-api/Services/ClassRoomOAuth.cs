@@ -10,7 +10,11 @@ namespace classroom_api.Services
     {
         // If modifying these scopes, delete your previously saved credentials
         // at ~/.credentials/classroom.googleapis.com-dotnet-quickstart.json
-        static string[] Scopes = { ClassroomService.Scope.ClassroomCourses,ClassroomService.Scope.ClassroomRosters };
+        static string[] Scopes = {
+            ClassroomService.Scope.ClassroomCourses,
+            ClassroomService.Scope.ClassroomRosters,
+            ClassroomService.Scope.ClassroomCourseworkStudents
+        };
         static string ApplicationName = "Classroom API .NET Quickstart";
         public static ClassroomService GetClassroomService()
         {
@@ -57,7 +61,7 @@ namespace classroom_api.Services
             //}
         }
     }
-    
 
-    
+
+
 }
