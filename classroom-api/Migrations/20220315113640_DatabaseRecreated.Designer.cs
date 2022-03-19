@@ -12,22 +12,23 @@ using classroom_api.Services;
 namespace classroom_api.Migrations
 {
     [DbContext(typeof(ClassroomapiContext))]
-    [Migration("20220311064128_Added_CoursesAndStudents")]
-    partial class Added_CoursesAndStudents
+    [Migration("20220315113640_DatabaseRecreated")]
+    partial class DatabaseRecreated
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.3")
+                .HasAnnotation("ProductVersion", "6.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("classroom_api.Models.CourseModel", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CourseState")
                         .IsRequired()
@@ -38,6 +39,10 @@ namespace classroom_api.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("DescriptionHeading")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("GoogleId")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -56,6 +61,41 @@ namespace classroom_api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Courses");
+                });
+
+            modelBuilder.Entity("classroom_api.Models.InvitationModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CourseModelId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("GoogleInvitationId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseModelId");
+
+                    b.ToTable("Invitations");
                 });
 
             modelBuilder.Entity("classroom_api.Models.StatisticModel", b =>
@@ -103,8 +143,8 @@ namespace classroom_api.Migrations
 
             modelBuilder.Entity("CourseModelStudentModel", b =>
                 {
-                    b.Property<string>("CoursesId")
-                        .HasColumnType("text");
+                    b.Property<Guid>("CoursesId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("StudentsId")
                         .HasColumnType("uuid");
@@ -114,6 +154,13 @@ namespace classroom_api.Migrations
                     b.HasIndex("StudentsId");
 
                     b.ToTable("CourseModelStudentModel");
+                });
+
+            modelBuilder.Entity("classroom_api.Models.InvitationModel", b =>
+                {
+                    b.HasOne("classroom_api.Models.CourseModel", null)
+                        .WithMany("Invations")
+                        .HasForeignKey("CourseModelId");
                 });
 
             modelBuilder.Entity("CourseModelStudentModel", b =>
@@ -129,6 +176,11 @@ namespace classroom_api.Migrations
                         .HasForeignKey("StudentsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("classroom_api.Models.CourseModel", b =>
+                {
+                    b.Navigation("Invations");
                 });
 #pragma warning restore 612, 618
         }

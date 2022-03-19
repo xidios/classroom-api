@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using classroom_api.Models;
 using Google.Apis.Classroom.v1.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
@@ -29,13 +30,10 @@ namespace classroom_api.Services
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            OnModelCreatingPartial(modelBuilder);           
+            base.OnModelCreating(modelBuilder);
         }
-
-        partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
-
-        public DbSet<StatisticModel> StatisticModels { get; set; }
         public DbSet<CourseModel> Courses { get; set; }
         public DbSet<StudentModel> Students { get; set; }
+        public DbSet<InvitationModel> Invitations { get; set; }
     }
 }

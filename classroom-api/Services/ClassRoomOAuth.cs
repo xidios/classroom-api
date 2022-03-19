@@ -3,6 +3,8 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Classroom.v1.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using Microsoft.AspNetCore.Identity;
+using classroom_api.Models;
 
 namespace classroom_api.Services
 {
