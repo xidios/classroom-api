@@ -2,6 +2,7 @@ using classroom_api.Models;
 using classroom_api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 //var connectionString = builder.Configuration.GetConnectionString("classroom_apiContextConnection");builder.Services.AddDbContext<ClassroomapiContext>(options =>
@@ -20,6 +21,9 @@ builder.Services.AddDbContext<ClassroomapiContext>(options =>
          options.UseNpgsql(connectionString));
 
 
+builder.Services.AddControllers().AddJsonOptions(x =>
+                x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
+
 var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -30,12 +34,6 @@ if (app.Environment.IsDevelopment())
 
 
 app.UseHttpsRedirection();
-//app.UseAuthentication();
-//app.UseAuthorization();
-//app.MapControllerRoute(
-//    name: "default",
-//    pattern: "{controller=Home}/{action=Index}/{id?}");
-//app.MapRazorPages();
 app.MapControllers();
 //using( var db = new ClassroomapiContext())
 //{
@@ -44,6 +42,14 @@ app.MapControllers();
 //        Name = "xqc",
 //        AccountId = "104780416574104474334",
 //        Email = "redbull-8@bk.ru"
+//    });
+//    db.SaveChanges();
+//}
+//using (var db = new ClassroomapiContext())
+//{
+//    db.Users.Add(new UserModel
+//    {
+//        Name = "admin",
 //    });
 //    db.SaveChanges();
 //}

@@ -1,11 +1,10 @@
 ﻿namespace classroom_api.Models
 {
-    public class StudentModel
+    public class SubdivisionModel
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string AccountId { get; set; }
-        public string Email { get; set; }
         public string Name { get; set; }
         public List<CourseModel> Courses { get; set; } = new List<CourseModel>();
+        public List<UserModel> Moderators { get; set; } = new List<UserModel>();
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using classroom_api.Services;
@@ -11,9 +12,10 @@ using classroom_api.Services;
 namespace classroom_api.Migrations
 {
     [DbContext(typeof(ClassroomapiContext))]
-    partial class ClassroomapiContextModelSnapshot : ModelSnapshot
+    [Migration("20220321073941_SubdivisionAdded")]
+    partial class SubdivisionAdded
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -137,21 +139,6 @@ namespace classroom_api.Migrations
                     b.ToTable("Subdivisions");
                 });
 
-            modelBuilder.Entity("classroom_api.Models.UserModel", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Users");
-                });
-
             modelBuilder.Entity("CourseModelStudentModel", b =>
                 {
                     b.Property<Guid>("CoursesId")
@@ -165,21 +152,6 @@ namespace classroom_api.Migrations
                     b.HasIndex("StudentsId");
 
                     b.ToTable("CourseModelStudentModel");
-                });
-
-            modelBuilder.Entity("SubdivisionModelUserModel", b =>
-                {
-                    b.Property<Guid>("ModeratorsId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SubdivisionsId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("ModeratorsId", "SubdivisionsId");
-
-                    b.HasIndex("SubdivisionsId");
-
-                    b.ToTable("SubdivisionModelUserModel");
                 });
 
             modelBuilder.Entity("classroom_api.Models.CourseModel", b =>
@@ -207,21 +179,6 @@ namespace classroom_api.Migrations
                     b.HasOne("classroom_api.Models.StudentModel", null)
                         .WithMany()
                         .HasForeignKey("StudentsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("SubdivisionModelUserModel", b =>
-                {
-                    b.HasOne("classroom_api.Models.UserModel", null)
-                        .WithMany()
-                        .HasForeignKey("ModeratorsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("classroom_api.Models.SubdivisionModel", null)
-                        .WithMany()
-                        .HasForeignKey("SubdivisionsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

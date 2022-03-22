@@ -89,6 +89,7 @@ namespace classroom_api.Controllers
         [HttpGet("invite/delete/{id}")]
         public ActionResult<Invitation> DeleteInvitation(string id)
         {
+            Guid invitationId;
             var db = new ClassroomapiContext();
             if (id == null || id == "")
             {
@@ -96,7 +97,15 @@ namespace classroom_api.Controllers
             }
             try
             {
-                InvitationModel? invitation = db.Invitations.FirstOrDefault(i => i.Id == Guid.Parse(id));
+                invitationId = Guid.Parse(id);
+            }
+            catch 
+            {
+                return BadRequest("Id isn't correct");
+            }
+            try
+            {
+                InvitationModel? invitation = db.Invitations.FirstOrDefault(i => i.Id == invitationId);
                 if (invitation == null)
                 {
                     return BadRequest("INVITATION NOT FOUND");
@@ -242,7 +251,7 @@ namespace classroom_api.Controllers
 
         }
 
-        [HttpPost("invite/students")]
+        [HttpPost("invite/student")]
         public ActionResult<List<InvitationModel>> InviteStudents([FromBody] InvitePersonModel model)
         {
             return InviteToClassroomByRole(model, "STUDENT");
