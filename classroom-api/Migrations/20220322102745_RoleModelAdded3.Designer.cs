@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using classroom_api.Services;
@@ -11,9 +12,10 @@ using classroom_api.Services;
 namespace classroom_api.Migrations
 {
     [DbContext(typeof(ClassroomapiContext))]
-    partial class ClassroomapiContextModelSnapshot : ModelSnapshot
+    [Migration("20220322102745_RoleModelAdded3")]
+    partial class RoleModelAdded3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -124,7 +126,12 @@ namespace classroom_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("PermissionId");
 
                     b.ToTable("Roles");
                 });
@@ -197,36 +204,6 @@ namespace classroom_api.Migrations
                     b.ToTable("CourseModelStudentModel");
                 });
 
-            modelBuilder.Entity("PermissionModelRoleModel", b =>
-                {
-                    b.Property<Guid>("PermissionsId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("RolesId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("PermissionsId", "RolesId");
-
-                    b.HasIndex("RolesId");
-
-                    b.ToTable("PermissionModelRoleModel");
-                });
-
-            modelBuilder.Entity("RoleModelUserModel", b =>
-                {
-                    b.Property<Guid>("RolesId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UsersId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("RolesId", "UsersId");
-
-                    b.HasIndex("UsersId");
-
-                    b.ToTable("RoleModelUserModel");
-                });
-
             modelBuilder.Entity("SubdivisionModelUserModel", b =>
                 {
                     b.Property<Guid>("ModeratorsId")
@@ -256,6 +233,17 @@ namespace classroom_api.Migrations
                         .HasForeignKey("CourseModelId");
                 });
 
+            modelBuilder.Entity("classroom_api.Models.RoleModel", b =>
+                {
+                    b.HasOne("classroom_api.Models.PermissionModel", "Permission")
+                        .WithMany("Roles")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+                });
+
             modelBuilder.Entity("CourseModelStudentModel", b =>
                 {
                     b.HasOne("classroom_api.Models.CourseModel", null)
@@ -267,36 +255,6 @@ namespace classroom_api.Migrations
                     b.HasOne("classroom_api.Models.StudentModel", null)
                         .WithMany()
                         .HasForeignKey("StudentsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("PermissionModelRoleModel", b =>
-                {
-                    b.HasOne("classroom_api.Models.PermissionModel", null)
-                        .WithMany()
-                        .HasForeignKey("PermissionsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("classroom_api.Models.RoleModel", null)
-                        .WithMany()
-                        .HasForeignKey("RolesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("RoleModelUserModel", b =>
-                {
-                    b.HasOne("classroom_api.Models.RoleModel", null)
-                        .WithMany()
-                        .HasForeignKey("RolesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("classroom_api.Models.UserModel", null)
-                        .WithMany()
-                        .HasForeignKey("UsersId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -319,6 +277,11 @@ namespace classroom_api.Migrations
             modelBuilder.Entity("classroom_api.Models.CourseModel", b =>
                 {
                     b.Navigation("Invations");
+                });
+
+            modelBuilder.Entity("classroom_api.Models.PermissionModel", b =>
+                {
+                    b.Navigation("Roles");
                 });
 
             modelBuilder.Entity("classroom_api.Models.SubdivisionModel", b =>

@@ -37,5 +37,7 @@ namespace classroom_api.Services
         public DbSet<InvitationModel> Invitations { get; set; }
         public DbSet<SubdivisionModel> Subdivisions { get; set; }
         public DbSet<UserModel> Users { get; set; }
+        public DbSet<RoleModel> Roles { get; set; }
+        public DbSet<PermissionModel> Permissions { get; set; }
     }
 }

@@ -53,4 +53,16 @@ app.MapControllers();
 //    });
 //    db.SaveChanges();
 //}
+//using (var db = new ClassroomapiContext())
+//{
+//    List<PermissionModel> permissions = new List<PermissionModel> {
+//        new PermissionModel { Action = "GetFaculties" }
+//    };
+//    db.Permissions.AddRange(permissions);
+//    db.Roles.AddRange(
+//        new RoleModel { Name = "Admin", Permissions = permissions },
+//        new RoleModel { Name = "Admin2", Permissions = permissions }
+//        );
+//    db.SaveChanges();
+//}
 app.Run();
