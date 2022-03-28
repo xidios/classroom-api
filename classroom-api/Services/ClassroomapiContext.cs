@@ -39,5 +39,6 @@ namespace classroom_api.Services
         public DbSet<UserModel> Users { get; set; }
         public DbSet<RoleModel> Roles { get; set; }
         public DbSet<PermissionModel> Permissions { get; set; }
+        public DbSet<EmailModel> Emails { get; set; }
     }
 }
