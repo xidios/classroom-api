@@ -76,13 +76,13 @@ namespace classroom_api.Controllers
 
                 if (role == null)
                 {
-                    return BadRequest("Role not found");
+                    return NotFound("Role not found");
                 }
                 UserModel? user = db.Users
                     .FirstOrDefault(u => u.Id == userIdForDb);
                 if (user == null)
                 {
-                    return BadRequest("User not found");
+                    return NotFound("User not found");
                 }
                 user.Roles.Add(role);
                 role.Users.Add(user);
