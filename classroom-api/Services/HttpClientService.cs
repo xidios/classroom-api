@@ -3,15 +3,16 @@ using System.Text;
 
 namespace classroom_api.Services
 {
-    public interface IMiddlewareService
+    public interface IHttpClientService
     {
         public HttpClient InitLKStudentHttpClient();
+        public HttpClient InitPersonaTSUHttpClient();
 
     }
-    public class MiddlewareService : IMiddlewareService
+    public class HttpClientService : IHttpClientService
     {
         private readonly IConfiguration _configuration;
-        public MiddlewareService(IConfiguration configuration)
+        public HttpClientService(IConfiguration configuration)
         {
              _configuration = configuration;
         }
@@ -23,6 +24,23 @@ namespace classroom_api.Services
             string lk_password = lk.GetSection("Password").Value;
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Add("Host", "api.lk.student.tsu.ru");
+            string basicAuth = System.Convert.ToBase64String(Encoding.GetEncoding("ISO-8859-1")
+                                           .GetBytes(lk_username + ":" + lk_password));
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Basic", basicAuth);
+            return client;
+        }
+
+        public HttpClient InitPersonaTSUHttpClient()
+        {
+            HttpClient client = new HttpClient();
+            var lk = _configuration.GetSection("PersonaTSU");
+            string lk_username = lk.GetSection("Loggin").Value;
+            string lk_password = lk.GetSection("Password").Value;
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Add("Host", "persona.tsu.ru");
             string basicAuth = System.Convert.ToBase64String(Encoding.GetEncoding("ISO-8859-1")
                                            .GetBytes(lk_username + ":" + lk_password));
             client.DefaultRequestHeaders.Accept.Add(

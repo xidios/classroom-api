@@ -13,21 +13,25 @@ namespace classroom_api.Controllers
     [Route("tsu")]
     public class TSUController : ControllerBase
     {
-        private readonly IMiddlewareService _middlewareService;
+        private readonly IHttpClientService _httpClientService;
 
 
         private string lk_path = "https://api.lk.student.tsu.ru/";
-        private HttpClient client;
-        public TSUController(IMiddlewareService middlewareService)
+        private string persona_path = "https://persona.tsu.ru/api/";
+        private HttpClient LKStudentClient;
+        private HttpClient PersonaTSUClient;
+        public TSUController(IHttpClientService httpClientService)
         {
-            _middlewareService = middlewareService;
-            client = _middlewareService.InitLKStudentHttpClient();
+            _httpClientService = httpClientService;
+            LKStudentClient = _httpClientService.InitLKStudentHttpClient();
+            PersonaTSUClient = _httpClientService.InitPersonaTSUHttpClient();
         }
+        #region LK_Students
         [HttpGet("faculties")]
         public async Task<ActionResult<List<TSUDepartament>>> GetFaculties()
         {
             var uri = lk_path + "departments";                                             
-            var response = await client.GetAsync(uri);
+            var response = await LKStudentClient.GetAsync(uri);
             if (response.IsSuccessStatusCode)
             {
                 var departaments = await response.Content.ReadFromJsonAsync<List<TSUDepartament>>();
@@ -43,7 +47,7 @@ namespace classroom_api.Controllers
         public async Task<ActionResult<List<TSUGroup>>> GetGroups(Guid facultyId)
         {
             var uri = lk_path + "departments/groups_by_faculty/" + facultyId.ToString();
-            var response = await client.GetAsync(uri);
+            var response = await LKStudentClient.GetAsync(uri);
             if (response.IsSuccessStatusCode)
             {
                 var groups = await response.Content.ReadFromJsonAsync<List<TSUGroup>>();
@@ -59,7 +63,7 @@ namespace classroom_api.Controllers
         public async Task<ActionResult<List<TSUStudent>>> GetStudents(string groupNumber)
         {
             var uri = lk_path + "students/group/" + groupNumber;
-            var response = await client.GetAsync(uri);
+            var response = await LKStudentClient.GetAsync(uri);
             if (response.IsSuccessStatusCode)
             {
                 var students = await response.Content.ReadFromJsonAsync<List<TSUStudent>>();
@@ -71,7 +75,28 @@ namespace classroom_api.Controllers
             }
             return BadRequest();
         }
+        #endregion
+
+        #region PersonaTSU
+
+        [HttpGet("teachers/find/{namePart}")]
+        public async Task<ActionResult<List<TSUTeacher>>> GetTeachers(string namePart)
+        {
+            var uri = persona_path + "/FindUsers?namePart=" + namePart;
+            var response = await PersonaTSUClient.GetAsync(uri);
+            if (response.IsSuccessStatusCode)
+            {
+                var teachers = await response.Content.ReadFromJsonAsync<List<TSUTeacher>>();
+                return Ok(teachers);
+            }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                return StatusCode((int)HttpStatusCode.Unauthorized);
+            }
+            return BadRequest();
+        }
+        #endregion
 
     }
-    
+
 }

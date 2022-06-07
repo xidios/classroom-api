@@ -8,147 +8,135 @@ namespace classroom_api.Controllers
     [Route("[controller]")]
     public partial class RoleController : ControllerBase
     {
+        private readonly ClassroomapiContext _context;
+        public RoleController(ClassroomapiContext context)
+        {
+            _context = context;
+        }
         #region HTTP_GET
 
         [HttpGet("")]
-        public ActionResult<List<RoleModel>> GetRoleList()
+        public async Task<ActionResult<List<RoleModel>>> GetRoleList()
         {
-            using (var db = new ClassroomapiContext())
-            {
-                return (db.Roles
-                    .Include(r=>r.Permissions)
-                    .ToList());
-            }
+            return (await _context.Roles
+                .Include(r => r.Permissions)
+                .ToListAsync());
         }
 
         [HttpGet("{id}")]
-        public ActionResult<RoleModel> GetRole(string id)
+        public async Task<ActionResult<RoleModel>> GetRole(string id)
         {
             Guid.TryParse(id, out var roleId);
 
-            using (var db = new ClassroomapiContext())
+
+            RoleModel? role = await _context.Roles
+                .Include(r => r.Permissions)
+                .FirstOrDefaultAsync(r => r.Id == roleId);
+            if (role == null)
             {
-                RoleModel? role = db.Roles
-                    .Include(r => r.Permissions)
-                    .FirstOrDefault(r => r.Id == roleId);
-                if (role == null)
-                {
-                    return BadRequest("Role not found");
-                }
-                db.SaveChanges();
-                return (role);
+                return BadRequest("Role not found");
             }
+            await _context.SaveChangesAsync();
+            return (role);
+
         }
 
         [HttpGet("permissions")]
-        public ActionResult<List<PermissionModel>> GetPermissionList()
+        public async Task<ActionResult<List<PermissionModel>>> GetPermissionList()
         {
-            using (var db = new ClassroomapiContext())
-            {
-                return Ok(db.Permissions.ToList());
-            }            
-        }        
+            return Ok(await _context.Permissions.ToListAsync());
+        }
         #endregion
 
         #region HTTP_POST
         [HttpPost("")]
-        public ActionResult<List<RoleModel>> CreateRole()
+        public async Task<ActionResult<List<RoleModel>>> CreateRole()
         {
-            using (var db = new ClassroomapiContext())
-            {
-                return (db.Roles
-                    .Include(r => r.Permissions)
-                    .ToList());
-            }
+            return (await _context.Roles
+                .Include(r => r.Permissions)
+                .ToListAsync());
         }
 
         [HttpPost("{roleId}/{userId}")]
-        public ActionResult<UserModel> AddUserRole(string roleId, string userId)
+        public async Task<ActionResult<UserModel>> AddUserRole(string roleId, string userId)
         {
             Guid.TryParse(roleId, out var roleIdForDb);
             Guid.TryParse(userId, out var userIdForDb);
 
-            using (var db = new ClassroomapiContext())
-            {
-                RoleModel? role = db.Roles
-                    .Include(r => r.Permissions)
-                    .FirstOrDefault(r => r.Id == roleIdForDb);
+            RoleModel? role = await _context.Roles
+                .Include(r => r.Permissions)
+                .FirstOrDefaultAsync(r => r.Id == roleIdForDb);
 
-                if (role == null)
-                {
-                    return NotFound("Role not found");
-                }
-                UserModel? user = db.Users
-                    .FirstOrDefault(u => u.Id == userIdForDb);
-                if (user == null)
-                {
-                    return NotFound("User not found");
-                }
-                user.Roles.Add(role);
-                role.Users.Add(user);
-                db.SaveChanges();
-                return user;
+            if (role == null)
+            {
+                return NotFound("Role not found");
             }
+            UserModel? user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userIdForDb);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+            user.Roles.Add(role);
+            role.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+
         }
         #endregion
 
         #region HTTP_DELETE
         [HttpDelete("{id}")]
-        public ActionResult<RoleModel> DeleteRole(string id)
+        public async Task<ActionResult<RoleModel>> DeleteRole(string id)
         {
             Guid.TryParse(id, out var roleId);
 
-            using (var db = new ClassroomapiContext())
+            RoleModel? role = await _context.Roles
+                .Include(r => r.Permissions)
+                .FirstOrDefaultAsync(r => r.Id == roleId);
+            if (role == null)
             {
-                RoleModel? role = db.Roles
-                    .Include(r=>r.Permissions)
-                    .FirstOrDefault(r=>r.Id == roleId);
-                if (role == null) 
-                {
-                    return BadRequest("Role not found");
-                }
-                db.Roles.Remove(role);
-                db.SaveChanges();
-                return (role);
+                return BadRequest("Role not found");
             }
+            _context.Roles.Remove(role);
+            await _context.SaveChangesAsync();
+            return (role);
+
         }
 
         [HttpDelete("{roleId}/{userId}")]
-        public ActionResult<UserModel> RemoveUserRole(string roleId, string userId)
+        public async Task<ActionResult<UserModel>> RemoveUserRole(string roleId, string userId)
         {
             Guid.TryParse(roleId, out var roleIdForDb);
             Guid.TryParse(userId, out var userIdForDb);
 
-            using (var db = new ClassroomapiContext())
+            UserModel? user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userIdForDb);
+            if (user == null)
             {
-
-                UserModel? user = db.Users
-                    .FirstOrDefault(u => u.Id == userIdForDb);
-                if (user == null)
-                {
-                    return BadRequest("User not found");
-                }
-
-                RoleModel? role = db.Roles
-                    .Include(r => r.Permissions)
-                    .FirstOrDefault(r => r.Id == roleIdForDb);
-
-                if (role == null)
-                {
-                    return BadRequest("Role not found");
-                }
-                
-                user.Roles.Remove(role);
-                role.Users.Remove(user);
-                db.SaveChanges();
-                return user;
+                return BadRequest("User not found");
             }
+
+            RoleModel? role = await _context.Roles
+                .Include(r => r.Permissions)
+                .FirstOrDefaultAsync(r => r.Id == roleIdForDb);
+
+            if (role == null)
+            {
+                return BadRequest("Role not found");
+            }
+
+            user.Roles.Remove(role);
+            role.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return user;
+
         }
         #endregion
 
         #region HTTP_PATCH
         [HttpPatch("{id}")]
-        public ActionResult<RoleModel> EditRole(string id, string Name)
+        public async Task<ActionResult<RoleModel>> EditRole(string id, string Name)
         {
             if (Name == null || Name == "")
             {
@@ -157,20 +145,18 @@ namespace classroom_api.Controllers
 
             Guid.TryParse(id, out var roleId);
 
-            using (var db = new ClassroomapiContext())
-            {
-                RoleModel? role = db.Roles
+                RoleModel? role = await _context.Roles
                     .Include(r => r.Permissions)
-                    .FirstOrDefault(r => r.Id == roleId);
+                    .FirstOrDefaultAsync(r => r.Id == roleId);
                 if (role == null)
                 {
                     return BadRequest("Role not found");
                 }
                 role.Name = Name;
-                db.SaveChanges();
+                await _context.SaveChangesAsync();
                 return role;
-            }
-        }      
+            
+        }
         #endregion
     }
 }

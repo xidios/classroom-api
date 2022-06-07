@@ -9,6 +9,7 @@ using Google;
 using System;
 using classroom_api.FromBodyModels;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -16,34 +17,33 @@ namespace classroom_api.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    public partial class ClassroomController : ControllerBase
+    public class ClassroomController : ControllerBase
     {
         private ClassroomService classroomService = ClassRoomOAuth.GetClassroomService();
+        private readonly ClassroomapiContext _context;
+        public ClassroomController(ClassroomapiContext context)
+        {
+            _context = context;
+        }
         #region HTTP_GET
 
         [HttpGet("list")]
-        public ActionResult<List<CourseModel>> GetClassroomList()
+        public async Task<ActionResult<List<CourseModel>>> GetClassroomList()
         {
-            using (ClassroomapiContext db = new ClassroomapiContext())
-            {
-                return Ok(db.Courses.ToList());
-            }
+            return Ok(await _context.Courses.ToListAsync());
         }
         [HttpGet("list/active")]
-        public ActionResult<List<CourseModel>> GetClassroomActiveList()
+        public async Task<ActionResult<List<CourseModel>>> GetClassroomActiveList()
         {
-            using (ClassroomapiContext db = new ClassroomapiContext())
-            {
-                return Ok(db.Courses.Where(c => c.CourseState.ToLower() == "active").ToList());
-            }
+
+            return Ok(await _context.Courses.Where(c => c.CourseState.ToLower() == "active").ToListAsync());
+
         }
         [HttpGet("list/archived")]
-        public ActionResult<List<CourseModel>> GetClassroomArchiveList()
+        public async Task<ActionResult<List<CourseModel>>> GetClassroomArchiveList()
         {
-            using (ClassroomapiContext db = new ClassroomapiContext())
-            {
-                return Ok(db.Courses.Where(c => c.CourseState.ToLower() == "archived").ToList());
-            }
+            return Ok(await _context.Courses.Where(c => c.CourseState.ToLower() == "archived").ToListAsync());
+
         }
         [HttpGet("info/{userId}")]
         public ActionResult GetUserInformation(string userId)
@@ -60,13 +60,11 @@ namespace classroom_api.Controllers
         }
 
         [HttpGet("updateInvitation")]
-        public ActionResult<List<InvitationModel>> UpdateInvitationStatus()
+        public async Task<ActionResult<List<InvitationModel>>> UpdateInvitationStatus()
         {
             List<InvitationModel> invitations;
-            List<Invitation> googleInvitations = new List<Invitation>();
-            var db = new ClassroomapiContext();
 
-            invitations = db.Invitations.ToList();
+            invitations = await _context.Invitations.ToListAsync();
 
             foreach (var invitation in invitations)
             {
@@ -83,14 +81,13 @@ namespace classroom_api.Controllers
                     continue;
                 }
             }
-            db.SaveChanges();
+            await _context.SaveChangesAsync();
             return Ok(invitations);
         }
         [HttpGet("invite/delete/{id}")]
-        public ActionResult<Invitation> DeleteInvitation(string id)
+        public async Task<ActionResult<Invitation>> DeleteInvitation(string id)
         {
             Guid invitationId;
-            var db = new ClassroomapiContext();
             if (id == null || id == "")
             {
                 return BadRequest("Id is empty");
@@ -99,20 +96,20 @@ namespace classroom_api.Controllers
             {
                 invitationId = Guid.Parse(id);
             }
-            catch 
+            catch
             {
                 return BadRequest("Id isn't correct");
             }
             try
             {
-                InvitationModel? invitation = db.Invitations.FirstOrDefault(i => i.Id == invitationId);
+                InvitationModel? invitation = await _context.Invitations.FirstOrDefaultAsync(i => i.Id == invitationId);
                 if (invitation == null)
                 {
                     return BadRequest("INVITATION NOT FOUND");
                 }
                 var invitationDeleteResponse = classroomService.Invitations.Delete(invitation.GoogleInvitationId);
-                db.Invitations.Remove(invitation);
-                db.SaveChanges();
+                _context.Invitations.Remove(invitation);
+                await _context.SaveChangesAsync();
                 return Ok(invitationDeleteResponse);
             }
             catch (GoogleApiException ex)
@@ -121,27 +118,25 @@ namespace classroom_api.Controllers
             }
         }
         [HttpGet("stats")]
-        public ActionResult<StatisticModel> GetTechStatistic()
+        public async Task<ActionResult<StatisticModel>> GetTechStatistic()
         {
-            using (var db = new ClassroomapiContext())
+
+            List<InvitationModel> invitations = await _context.Invitations.ToListAsync();
+            List<CourseModel> courses = await _context.Courses.ToListAsync();
+            StatisticModel statistic = new StatisticModel
             {
-                List<InvitationModel> invitations = db.Invitations.ToList();
-                List<CourseModel> courses = db.Courses.ToList();
-                StatisticModel statistic = new StatisticModel
-                {
-                    ClassesCreatedCount = courses.Count,
-                    StudentsInvitationCount = invitations.Where(i => i.Role.ToUpper() == "STUDENT" && i.Status.ToUpper() == "OK").Count(),
-                    TeacherInvitationCount = invitations.Where(i => i.Role.ToUpper() == "TEACHER" && i.Status.ToUpper() == "OK").Count()
-                };
-                return Ok(statistic);
-            }
+                ClassesCreatedCount = courses.Count,
+                StudentsInvitationCount = invitations.Where(i => i.Role.ToUpper() == "STUDENT" && i.Status.ToUpper() == "OK").Count(),
+                TeacherInvitationCount = invitations.Where(i => i.Role.ToUpper() == "TEACHER" && i.Status.ToUpper() == "OK").Count()
+            };
+            return Ok(statistic);
+
         }
 
         [HttpGet("tasks")]
-        public ActionResult<List<CourseWork>> CheckCourseworks()
+        public async Task<ActionResult<List<CourseWork>>> CheckCourseworks()
         {
-            ClassroomapiContext db = new ClassroomapiContext();
-            List<CourseModel> courses = db.Courses.Where(c => c.CourseState.ToUpper() == "ACTIVE").ToList();
+            List<CourseModel> courses = await _context.Courses.Where(c => c.CourseState.ToUpper() == "ACTIVE").ToListAsync();
             List<CourseWork> courseWorks = new List<CourseWork>();
             foreach (var course in courses)
             {
@@ -161,10 +156,9 @@ namespace classroom_api.Controllers
         }
 
         [HttpGet("tasks/substring")]
-        public ActionResult<List<StudentSubmission>> GetAllCourseWorksSubstrings()
+        public async Task<ActionResult<List<StudentSubmission>>> GetAllCourseWorksSubstrings()
         {
-            ClassroomapiContext db = new ClassroomapiContext();
-            List<CourseModel> courses = db.Courses.Where(c => c.CourseState.ToUpper() == "ACTIVE").ToList();
+            List<CourseModel> courses = await _context.Courses.Where(c => c.CourseState.ToUpper() == "ACTIVE").ToListAsync();
             List<CourseWork> courseWorks = new List<CourseWork>();
             List<StudentSubmission> studentSubmissions = new List<StudentSubmission>();
             foreach (var course in courses)
@@ -182,7 +176,7 @@ namespace classroom_api.Controllers
                 }
             }
 
-            foreach(var courseWork in courseWorks)
+            foreach (var courseWork in courseWorks)
             {
                 try
                 {
@@ -204,7 +198,7 @@ namespace classroom_api.Controllers
         #region HTTP_POST
 
         [HttpPost("create")]
-        public ActionResult<CourseModel> CreateClassroomCourse([FromBody] ClassroomCreateFromBodyModel model)
+        public async Task<ActionResult<CourseModel>> CreateClassroomCourse([FromBody] ClassroomCreateFromBodyModel model)
         {
             if (model.Name == null)
             {
@@ -227,22 +221,21 @@ namespace classroom_api.Controllers
             try
             {
                 course = classroomService.Courses.Create(course).Execute();
-                using (var db = new ClassroomapiContext())
-                {
-                    CourseModel courseModel = new CourseModel
-                    {
-                        Name = course.Name,
-                        Description = course.Description,
-                        DescriptionHeading = course.DescriptionHeading,
-                        Section = course.Section,
-                        CourseState = course.CourseState,
-                        GoogleId = course.Id
-                    };
-                    db.Courses.Add(courseModel);
-                    db.SaveChanges();
 
-                    return Ok(courseModel);
-                }
+                CourseModel courseModel = new CourseModel
+                {
+                    Name = course.Name,
+                    Description = course.Description,
+                    DescriptionHeading = course.DescriptionHeading,
+                    Section = course.Section,
+                    CourseState = course.CourseState,
+                    GoogleId = course.Id
+                };
+                _context.Courses.Add(courseModel);
+                await _context.SaveChangesAsync();
+
+                return Ok(courseModel);
+
             }
             catch (GoogleApiException ex)
             {
@@ -252,19 +245,19 @@ namespace classroom_api.Controllers
         }
 
         [HttpPost("invite/student")]
-        public ActionResult<List<InvitationModel>> InviteStudents([FromBody] InvitePersonModel model)
+        public async Task<ActionResult<List<InvitationModel>>> InviteStudents([FromBody] InvitePersonModel model)
         {
-            return InviteToClassroomByRole(model, "STUDENT");
+            return await InviteToClassroomByRole(model, "STUDENT");
         }
 
         [HttpPost("invite/teacher")]
-        public ActionResult<List<InvitationModel>> InviteTeachers([FromBody] InvitePersonModel model)
+        public async Task<ActionResult<List<InvitationModel>>> InviteTeachers([FromBody] InvitePersonModel model)
         {
-            return InviteToClassroomByRole(model, "TEACHER");
+            return await InviteToClassroomByRole(model, "TEACHER");
         }
 
         [HttpPost("invite/group")]
-        public ActionResult<List<Student>> InviteGroup([FromBody] InviteGroupModel model)
+        public async Task<ActionResult<List<Student>>> InviteGroup([FromBody] InviteGroupModel model)
         {
             if (model.AccountIdList.Count() == 0)
             {
@@ -282,20 +275,19 @@ namespace classroom_api.Controllers
                         Role = "STUDENT"
                     };
                     var inviteResponse = classroomService.Invitations.Create(invite).Execute();
-                    using (var db = new ClassroomapiContext())
-                    {
-                        InvitationModel invitationModel = new InvitationModel
-                        {
-                            CourseId = model.CourseId,
-                            Email = accountId,
-                            Role = "STUDENT",
-                            GoogleInvitationId = inviteResponse.Id
-                        };
-                        db.Invitations.Add(invitationModel);
-                        db.SaveChanges();
 
-                        InvitationsResult.Add(invitationModel);
-                    }
+                    InvitationModel invitationModel = new InvitationModel
+                    {
+                        CourseId = model.CourseId,
+                        Email = accountId,
+                        Role = "STUDENT",
+                        GoogleInvitationId = inviteResponse.Id
+                    };
+                    _context.Invitations.Add(invitationModel);
+                    await _context.SaveChangesAsync();
+
+                    InvitationsResult.Add(invitationModel);
+
                 }
                 catch (GoogleApiException ex)
                 {
@@ -319,14 +311,13 @@ namespace classroom_api.Controllers
         #region HTTP_PATCH
 
         [HttpPatch("update")]
-        public ActionResult<CourseModel> UpdateClassroom([FromBody] ClassroomPutchFromBodyModel model)
+        public async Task<ActionResult<CourseModel>> UpdateClassroom([FromBody] ClassroomPutchFromBodyModel model)
         {
-            var db = new ClassroomapiContext();
             CourseModel? courseFromDb;
             Course course;
             try
             {
-                courseFromDb = db.Courses.FirstOrDefault(c => c.Id == model.Id);
+                courseFromDb = await _context.Courses.FirstOrDefaultAsync(c => c.Id == model.Id);
                 if (courseFromDb == null)
                 {
                     return BadRequest("COURSE NOT FOUND");
@@ -377,7 +368,7 @@ namespace classroom_api.Controllers
             try
             {
                 course = classroomService.Courses.Update(course, courseFromDb.GoogleId).Execute();
-                db.SaveChanges();
+                await _context.SaveChangesAsync();
                 return Ok(courseFromDb);
 
             }
@@ -418,7 +409,7 @@ namespace classroom_api.Controllers
             return true;
         }
 
-        private ActionResult InviteToClassroomByRole(InvitePersonModel model, string role)
+        private async Task<ActionResult> InviteToClassroomByRole(InvitePersonModel model, string role)
         {
             if (model.CourseId == null)
             {
@@ -438,20 +429,19 @@ namespace classroom_api.Controllers
                     Role = role
                 };
                 var inviteResponse = classroomService.Invitations.Create(invite).Execute();
-                using (var db = new ClassroomapiContext())
-                {
-                    InvitationModel invitationModel = new InvitationModel
-                    {
-                        CourseId = model.CourseId,
-                        Email = model.AccountId,
-                        Role = role,
-                        GoogleInvitationId = inviteResponse.Id
-                    };
-                    db.Invitations.Add(invitationModel);
-                    db.SaveChanges();
 
-                    return Ok(invite);
-                }
+                InvitationModel invitationModel = new InvitationModel
+                {
+                    CourseId = model.CourseId,
+                    Email = model.AccountId,
+                    Role = role,
+                    GoogleInvitationId = inviteResponse.Id
+                };
+                _context.Invitations.Add(invitationModel);
+                await _context.SaveChangesAsync();
+
+                return Ok(invite);
+
             }
             catch (GoogleApiException ex)
             {

@@ -24,7 +24,7 @@ builder.Services.AddDbContext<ClassroomapiContext>(options =>
 builder.Services.AddControllers().AddJsonOptions(x =>
                 x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
-builder.Services.AddScoped<IMiddlewareService, MiddlewareService>();
+builder.Services.AddScoped<IHttpClientService, HttpClientService>();
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.
