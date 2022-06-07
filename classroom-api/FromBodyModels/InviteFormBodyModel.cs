@@ -4,7 +4,7 @@ namespace classroom_api.FromBodyModels
 {
     public class InvitePersonModel
     {
-        public string CourseId { get; set; }
+        public Guid CourseId { get; set; }
         [JsonProperty(PropertyName = "AccountId")]
         public string AccountId { get; set; }
         
@@ -12,7 +12,7 @@ namespace classroom_api.FromBodyModels
 
     public class InviteGroupModel
     {
-        public string CourseId { get; set; }
+        public Guid CourseId { get; set; }
         public List<string> AccountIdList { get; set; }
 
     }

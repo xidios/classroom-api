@@ -10,6 +10,7 @@ using System;
 using classroom_api.FromBodyModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using classroom_api.Models.TSU;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -21,9 +22,12 @@ namespace classroom_api.Controllers
     {
         private ClassroomService classroomService = ClassRoomOAuth.GetClassroomService();
         private readonly ClassroomapiContext _context;
-        public ClassroomController(ClassroomapiContext context)
+        private readonly ITSUService _TSUService;
+        public ClassroomController(ClassroomapiContext context,
+            ITSUService TSUService)
         {
             _context = context;
+            _TSUService = TSUService;
         }
         #region HTTP_GET
 
@@ -256,56 +260,147 @@ namespace classroom_api.Controllers
             return await InviteToClassroomByRole(model, "TEACHER");
         }
 
+        //[HttpPost("invite/group")]
+        //public async Task<ActionResult<List<Student>>> InviteGroup([FromBody] InviteGroupModel model)
+        //{
+        //    if (model.AccountIdList.Count() == 0)
+        //    {
+        //        return BadRequest("Id list is empty");
+        //    }
+        //    List<InvitationModel> InvitationsResult = new List<InvitationModel>();
+        //    foreach (var accountId in model.AccountIdList)
+        //    {
+        //        try
+        //        {
+        //            Invitation invite = new Invitation
+        //            {
+        //                CourseId = model.CourseId.ToString(),
+        //                UserId = accountId,
+        //                Role = "STUDENT"
+        //            };
+        //            var inviteResponse = classroomService.Invitations.Create(invite).Execute();
+
+        //            InvitationModel invitationModel = new InvitationModel
+        //            {
+        //                CourseId = model.CourseId,
+        //                Email = accountId,
+        //                Role = "STUDENT",
+        //                GoogleInvitationId = inviteResponse.Id
+        //            };
+        //            _context.Invitations.Add(invitationModel);
+        //            await _context.SaveChangesAsync();
+
+        //            InvitationsResult.Add(invitationModel);
+
+        //        }
+        //        catch (GoogleApiException ex)
+        //        {
+        //            string errorException = GoogleApiExceptionReturnMessage(ex);
+        //            InvitationsResult.Add(new InvitationModel
+        //            {
+        //                CourseId = model.CourseId,
+        //                Email = accountId,
+        //                GoogleInvitationId = errorException,
+        //                Role = errorException,
+        //                Status = errorException
+        //            });
+        //            continue;
+        //        }
+        //    }
+        //    return Ok(InvitationsResult);
+        //}
+
         [HttpPost("invite/group")]
-        public async Task<ActionResult<List<Student>>> InviteGroup([FromBody] InviteGroupModel model)
+        public async Task<ActionResult<List<string>>> InviteGroup(string groupNumber, Guid courseId)
         {
-            if (model.AccountIdList.Count() == 0)
+            var course = await _context.Courses
+                .Include(c => c.Students)
+                .Where(c => c.Id == courseId).FirstOrDefaultAsync();
+            var allStudents = await _context.Students.ToListAsync();
+
+            if (course == null)
             {
-                return BadRequest("Id list is empty");
+                return NotFound("Course not found");
             }
-            List<InvitationModel> InvitationsResult = new List<InvitationModel>();
-            foreach (var accountId in model.AccountIdList)
+            List<string> InvitationsResult = new List<string>();
+            List<TSUStudent> students;
+
+            try
+            {
+                var kek = new TSUStudent
+                {
+                    AccountId = Guid.Parse("f43c6ea0-b2a2-48a7-91bc-1334b0cd3312"),
+                    Email = "redbull-8@bk.ru",
+                    FirstName = "Prisyach",
+                    LastName = "Vladimir",
+                    Patronymic = "Olegovich",
+                    Status = 0
+                };
+                students = new List<TSUStudent>() { kek };//await _TSUService.GetStudents(groupNumber);
+            }
+            catch (NullReferenceException ex)
+            {
+                return NotFound(ex.Message);
+            }
+
+            foreach (var student in students)
             {
                 try
                 {
+                    if(student.Status == 2) // отчислен
+                    {
+                        continue;
+                    }
+                    if (course.Students.Any(s => s.AccountId == student.AccountId))
+                    {
+                        InvitationsResult.Add($"{student.AccountId}: already in course");
+                        continue;
+                    }
                     Invitation invite = new Invitation
                     {
-                        CourseId = model.CourseId.ToString(),
-                        UserId = accountId,
+                        CourseId = course.GoogleId,
+                        UserId = student.Email,
                         Role = "STUDENT"
                     };
                     var inviteResponse = classroomService.Invitations.Create(invite).Execute();
 
                     InvitationModel invitationModel = new InvitationModel
                     {
-                        CourseId = model.CourseId,
-                        Email = accountId,
+                        CourseId = courseId,
+                        Course = course,
+                        Email = student.Email,
                         Role = "STUDENT",
                         GoogleInvitationId = inviteResponse.Id
                     };
+                    var currentStudent = allStudents.Where(s => s.AccountId == student.AccountId).FirstOrDefault();
+                    if (currentStudent == null)
+                    {
+                        currentStudent = new StudentModel
+                        {
+                            AccountId = student.AccountId,
+                            Email = student.Email,
+                            Name = student.LastName + " " + student.FirstName + " " + student.Patronymic
+                        };
+                        course.Students.Add(currentStudent);
+                        await _context.SaveChangesAsync();
+                    }
+                    currentStudent.Courses.Add(course);
                     _context.Invitations.Add(invitationModel);
+                    _context.Students.Add(currentStudent);
+                    course.Students.Add(currentStudent);
+                    course.Invations.Add(invitationModel);
+                    _context.UpdateRange(course, currentStudent);
                     await _context.SaveChangesAsync();
-
-                    InvitationsResult.Add(invitationModel);
-
                 }
                 catch (GoogleApiException ex)
                 {
                     string errorException = GoogleApiExceptionReturnMessage(ex);
-                    InvitationsResult.Add(new InvitationModel
-                    {
-                        CourseId = model.CourseId,
-                        Email = accountId,
-                        GoogleInvitationId = errorException,
-                        Role = errorException,
-                        Status = errorException
-                    });
+                    InvitationsResult.Add($"{student.AccountId}: {errorException}");
                     continue;
                 }
             }
             return Ok(InvitationsResult);
         }
-
         #endregion
 
         #region HTTP_PATCH

@@ -2,9 +2,9 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using classroom_api.Services;
 
 #nullable disable
@@ -12,51 +12,51 @@ using classroom_api.Services;
 namespace classroom_api.Migrations
 {
     [DbContext(typeof(ClassroomapiContext))]
-    [Migration("20220322095910_RoleModelAdded")]
-    partial class RoleModelAdded
+    [Migration("20220607192637_Init")]
+    partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "6.0.2")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
             modelBuilder.Entity("classroom_api.Models.CourseModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CourseState")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("DescriptionHeading")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("GoogleId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Section")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("SubdivisionModelId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -65,38 +65,57 @@ namespace classroom_api.Migrations
                     b.ToTable("Courses");
                 });
 
+            modelBuilder.Entity("classroom_api.Models.EmailModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsMain")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Emails");
+                });
+
             modelBuilder.Entity("classroom_api.Models.InvitationModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("CourseId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("CourseModelId")
-                        .HasColumnType("uuid");
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("GoogleInvitationId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Role")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseModelId");
+                    b.HasIndex("CourseId");
 
                     b.ToTable("Invitations");
                 });
@@ -105,18 +124,13 @@ namespace classroom_api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("RoleModelId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RoleModelId");
 
                     b.ToTable("Permissions");
                 });
@@ -125,11 +139,11 @@ namespace classroom_api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -140,19 +154,21 @@ namespace classroom_api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("AccountId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GoogleId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -163,11 +179,11 @@ namespace classroom_api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -178,11 +194,11 @@ namespace classroom_api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -192,10 +208,10 @@ namespace classroom_api.Migrations
             modelBuilder.Entity("CourseModelStudentModel", b =>
                 {
                     b.Property<Guid>("CoursesId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("StudentsId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("CoursesId", "StudentsId");
 
@@ -204,13 +220,43 @@ namespace classroom_api.Migrations
                     b.ToTable("CourseModelStudentModel");
                 });
 
+            modelBuilder.Entity("PermissionModelRoleModel", b =>
+                {
+                    b.Property<Guid>("PermissionsId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RolesId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PermissionsId", "RolesId");
+
+                    b.HasIndex("RolesId");
+
+                    b.ToTable("PermissionModelRoleModel");
+                });
+
+            modelBuilder.Entity("RoleModelUserModel", b =>
+                {
+                    b.Property<Guid>("RolesId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UsersId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RolesId", "UsersId");
+
+                    b.HasIndex("UsersId");
+
+                    b.ToTable("RoleModelUserModel");
+                });
+
             modelBuilder.Entity("SubdivisionModelUserModel", b =>
                 {
                     b.Property<Guid>("ModeratorsId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("SubdivisionsId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ModeratorsId", "SubdivisionsId");
 
@@ -226,18 +272,26 @@ namespace classroom_api.Migrations
                         .HasForeignKey("SubdivisionModelId");
                 });
 
-            modelBuilder.Entity("classroom_api.Models.InvitationModel", b =>
+            modelBuilder.Entity("classroom_api.Models.EmailModel", b =>
                 {
-                    b.HasOne("classroom_api.Models.CourseModel", null)
-                        .WithMany("Invations")
-                        .HasForeignKey("CourseModelId");
+                    b.HasOne("classroom_api.Models.UserModel", "User")
+                        .WithMany("Emails")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("classroom_api.Models.PermissionModel", b =>
+            modelBuilder.Entity("classroom_api.Models.InvitationModel", b =>
                 {
-                    b.HasOne("classroom_api.Models.RoleModel", null)
-                        .WithMany("Permissions")
-                        .HasForeignKey("RoleModelId");
+                    b.HasOne("classroom_api.Models.CourseModel", "Course")
+                        .WithMany("Invations")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
                 });
 
             modelBuilder.Entity("CourseModelStudentModel", b =>
@@ -251,6 +305,36 @@ namespace classroom_api.Migrations
                     b.HasOne("classroom_api.Models.StudentModel", null)
                         .WithMany()
                         .HasForeignKey("StudentsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PermissionModelRoleModel", b =>
+                {
+                    b.HasOne("classroom_api.Models.PermissionModel", null)
+                        .WithMany()
+                        .HasForeignKey("PermissionsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("classroom_api.Models.RoleModel", null)
+                        .WithMany()
+                        .HasForeignKey("RolesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RoleModelUserModel", b =>
+                {
+                    b.HasOne("classroom_api.Models.RoleModel", null)
+                        .WithMany()
+                        .HasForeignKey("RolesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("classroom_api.Models.UserModel", null)
+                        .WithMany()
+                        .HasForeignKey("UsersId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -275,14 +359,14 @@ namespace classroom_api.Migrations
                     b.Navigation("Invations");
                 });
 
-            modelBuilder.Entity("classroom_api.Models.RoleModel", b =>
-                {
-                    b.Navigation("Permissions");
-                });
-
             modelBuilder.Entity("classroom_api.Models.SubdivisionModel", b =>
                 {
                     b.Navigation("Courses");
+                });
+
+            modelBuilder.Entity("classroom_api.Models.UserModel", b =>
+                {
+                    b.Navigation("Emails");
                 });
 #pragma warning restore 612, 618
         }
