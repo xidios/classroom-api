@@ -315,6 +315,7 @@ namespace classroom_api.Controllers
         {
             var course = await _context.Courses
                 .Include(c => c.Students)
+                .Include(c=>c.Invations)
                 .Where(c => c.Id == courseId).FirstOrDefaultAsync();
             var allStudents = await _context.Students.ToListAsync();
 
@@ -327,16 +328,16 @@ namespace classroom_api.Controllers
 
             try
             {
-                var kek = new TSUStudent
-                {
-                    AccountId = Guid.Parse("f43c6ea0-b2a2-48a7-91bc-1334b0cd3312"),
-                    Email = "redbull-8@bk.ru",
-                    FirstName = "Prisyach",
-                    LastName = "Vladimir",
-                    Patronymic = "Olegovich",
-                    Status = 0
-                };
-                students = new List<TSUStudent>() { kek };//await _TSUService.GetStudents(groupNumber);
+                //var kek = new TSUStudent
+                //{
+                //    AccountId = Guid.Parse("f43c6ea0-b2a2-48a7-91bc-1334b0cd3312"),
+                //    Email = "redbull-8@bk.ru",
+                //    FirstName = "Prisyach",
+                //    LastName = "Vladimir",
+                //    Patronymic = "Olegovich",
+                //    Status = 0
+                //};
+                students = await _TSUService.GetStudents(groupNumber); //new List<TSUStudent>() { kek };;
             }
             catch (NullReferenceException ex)
             {
@@ -351,9 +352,9 @@ namespace classroom_api.Controllers
                     {
                         continue;
                     }
-                    if (course.Students.Any(s => s.AccountId == student.AccountId))
+                    if (course.Students.Any(s => s.AccountId == student.AccountId) && course.Invations.Any(i=>i.AccountId == student.AccountId && i.Status == "OK"))
                     {
-                        InvitationsResult.Add($"{student.AccountId}: already in course");
+                        InvitationsResult.Add($"{student.AccountId}: already invited");
                         continue;
                     }
                     Invitation invite = new Invitation
@@ -370,7 +371,8 @@ namespace classroom_api.Controllers
                         Course = course,
                         Email = student.Email,
                         Role = "STUDENT",
-                        GoogleInvitationId = inviteResponse.Id
+                        GoogleInvitationId = inviteResponse.Id,
+                        AccountId = student.AccountId
                     };
                     var currentStudent = allStudents.Where(s => s.AccountId == student.AccountId).FirstOrDefault();
                     if (currentStudent == null)
@@ -381,7 +383,7 @@ namespace classroom_api.Controllers
                             Email = student.Email,
                             Name = student.LastName + " " + student.FirstName + " " + student.Patronymic
                         };
-                        course.Students.Add(currentStudent);
+                        _context.Students.Add(currentStudent);
                         await _context.SaveChangesAsync();
                     }
                     currentStudent.Courses.Add(course);
@@ -391,6 +393,7 @@ namespace classroom_api.Controllers
                     course.Invations.Add(invitationModel);
                     _context.UpdateRange(course, currentStudent);
                     await _context.SaveChangesAsync();
+                    InvitationsResult.Add($"{student.AccountId}: invited");
                 }
                 catch (GoogleApiException ex)
                 {
