@@ -1,7 +1,13 @@
 using classroom_api.Models;
 using classroom_api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +25,28 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ClassroomapiContext>(options =>
     options.UseSqlServer(connectionString));
 
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            // указывает, будет ли валидироваться издатель при валидации токена
+            ValidateIssuer = true,
+            // строка, представляющая издателя
+            ValidIssuer = AuthOptions.ISSUER,
+            // будет ли валидироваться потребитель токена
+            ValidateAudience = true,
+            // установка потребителя токена
+            ValidAudience = AuthOptions.AUDIENCE,
+            // будет ли валидироваться время существования
+            ValidateLifetime = true,
+            // установка ключа безопасности
+            IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
+            // валидация ключа безопасности
+            ValidateIssuerSigningKey = true,
+        };
+    });
 
 builder.Services.AddControllers().AddJsonOptions(x =>
                 x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
@@ -33,38 +61,33 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseAuthentication();
+app.UseAuthorization();
 
+app.Map("/login/{username}", (string username) =>
+{
+    var claims = new List<Claim> { new Claim(ClaimTypes.Name, username) };
+    // создаем JWT-токен
+    var jwt = new JwtSecurityToken(
+            issuer: AuthOptions.ISSUER,
+            audience: AuthOptions.AUDIENCE,
+            claims: claims,
+            expires: DateTime.UtcNow.Add(TimeSpan.FromDays(2)),
+            signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
+
+    return new JwtSecurityTokenHandler().WriteToken(jwt);
+});
+
+app.Map("/data", [Authorize] () => new { message = "Hello World!" });
 
 app.UseHttpsRedirection();
 app.MapControllers();
-//using( var db = new ClassroomapiContext())
-//{
-//    db.Students.Add(new StudentModel
-//    {
-//        Name = "xqc",
-//        AccountId = "104780416574104474334",
-//        Email = "redbull-8@bk.ru"
-//    });
-//    db.SaveChanges();
-//}
-//using (var db = new ClassroomapiContext())
-//{
-//    db.Users.Add(new UserModel
-//    {
-//        Name = "admin",
-//    });
-//    db.SaveChanges();
-//}
-//using (var db = new ClassroomapiContext())
-//{
-//    List<PermissionModel> permissions = new List<PermissionModel> {
-//        new PermissionModel { Action = "GetFaculties" }
-//    };
-//    db.Permissions.AddRange(permissions);
-//    db.Roles.AddRange(
-//        new RoleModel { Name = "Admin", Permissions = permissions },
-//        new RoleModel { Name = "Admin2", Permissions = permissions }
-//        );
-//    db.SaveChanges();
-//}
 app.Run();
+public class AuthOptions
+{
+    public const string ISSUER = "tsuclassroomapi"; // издатель токена
+    public const string AUDIENCE = "MyAuthClient"; // потребитель токена
+    const string KEY = "tsu1337_228_";   // ключ для шифрации
+    public static SymmetricSecurityKey GetSymmetricSecurityKey() =>
+        new SymmetricSecurityKey(Encoding.UTF8.GetBytes(KEY));
+}

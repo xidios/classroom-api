@@ -317,7 +317,7 @@ namespace classroom_api.Controllers
                 .Include(c => c.Students)
                 .Include(c=>c.Invations)
                 .Where(c => c.Id == courseId).FirstOrDefaultAsync();
-            var allStudents = await _context.Students.ToListAsync();
+            
 
             if (course == null)
             {
@@ -343,7 +343,7 @@ namespace classroom_api.Controllers
             {
                 return NotFound(ex.Message);
             }
-
+            var allStudents = await _context.Students.ToListAsync();
             foreach (var student in students)
             {
                 try
@@ -507,6 +507,7 @@ namespace classroom_api.Controllers
             return true;
         }
 
+        //TODO: invite
         private async Task<ActionResult> InviteToClassroomByRole(InvitePersonModel model, string role)
         {
             if (model.CourseId == null)
