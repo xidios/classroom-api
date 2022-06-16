@@ -97,6 +97,30 @@ namespace classroom_api.Controllers
             return BadRequest();
         }
         #endregion
+        [HttpGet("get/{accountId:guid}")]
+        public async Task<ActionResult> TSUGetNameAndEmail(Guid accountId)
+        {
+            var uri = "https://accounts.tsu.ru/api/Profile/GetUserModel/?id=" + accountId.ToString();
+            HttpClient TSUAccounts = new HttpClient();
+            TSUAccounts.DefaultRequestHeaders.Accept.Clear();
+            TSUAccounts.DefaultRequestHeaders.Add("Host", "accounts.tsu.ru");
+            TSUAccounts.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+            TSUAccounts.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Basic", "YWNjb3VudHM6RXdjemN2MEE/cTkjbzZI");
+            var response = await TSUAccounts.GetAsync(uri);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var info = await response.Content.ReadAsStringAsync();
+                return Ok(info);
+            }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                return StatusCode((int)HttpStatusCode.Unauthorized);
+            }
+            return BadRequest();
+        }
 
     }
 

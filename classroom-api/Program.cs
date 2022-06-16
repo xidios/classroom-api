@@ -64,30 +64,45 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.Map("/login/{username}", (string username) =>
+//app.Map("/login/{username}", (string username) =>
+//{
+//    var claims = new List<Claim> { new Claim(ClaimTypes.Name, username) };
+//    // создаем JWT-токен
+//    var jwt = new JwtSecurityToken(
+//            issuer: AuthOptions.ISSUER,
+//            audience: AuthOptions.AUDIENCE,
+//            claims: claims,
+//            expires: DateTime.UtcNow.Add(TimeSpan.FromDays(2)),
+//            signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
+
+//    return new JwtSecurityTokenHandler().WriteToken(jwt);
+//});
+
+//app.Map("/data", [Authorize] () => new { message = "Hello World!" });
+
+using var serviceScope = app.Services.CreateScope();
+var context = serviceScope.ServiceProvider.GetService<ClassroomapiContext>();
+List<string> roles = new List<string>() { "Administrator", "Moderator", "Teacher", "Unprivileged" };
+var localRoles = context.Roles.ToList();
+foreach (var role in roles)
 {
-    var claims = new List<Claim> { new Claim(ClaimTypes.Name, username) };
-    // создаем JWT-токен
-    var jwt = new JwtSecurityToken(
-            issuer: AuthOptions.ISSUER,
-            audience: AuthOptions.AUDIENCE,
-            claims: claims,
-            expires: DateTime.UtcNow.Add(TimeSpan.FromDays(2)),
-            signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
-
-    return new JwtSecurityTokenHandler().WriteToken(jwt);
-});
-
-app.Map("/data", [Authorize] () => new { message = "Hello World!" });
-
+    if (localRoles.Any(x => x.Name == role))
+    {
+        continue;
+    }
+    context.Roles.Add(new RoleModel { Name = role });
+}
+context.SaveChanges();
 app.UseHttpsRedirection();
 app.MapControllers();
 app.Run();
+
+
 public class AuthOptions
 {
     public const string ISSUER = "tsuclassroomapi"; // издатель токена
     public const string AUDIENCE = "MyAuthClient"; // потребитель токена
-    const string KEY = "tsu1337_228_";   // ключ для шифрации
+    const string KEY = "mysupersecret_secrettsu!yes";   // ключ для шифрации
     public static SymmetricSecurityKey GetSymmetricSecurityKey() =>
         new SymmetricSecurityKey(Encoding.UTF8.GetBytes(KEY));
 }
