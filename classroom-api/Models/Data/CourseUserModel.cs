@@ -1,6 +1,8 @@
-﻿namespace classroom_api.Models
+﻿using classroom_api.Enums;
+
+namespace classroom_api.Models
 {
-    public class StudentModel
+    public class CourseUserModel
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public Guid AccountId { get; set; }

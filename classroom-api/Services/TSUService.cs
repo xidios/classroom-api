@@ -7,15 +7,18 @@ namespace classroom_api.Services
     public interface ITSUService
     {
         public Task<List<TSUStudent>> GetStudents(string groupNumber);
+        public Task<TSUNameAndEmail> GetTSUNameAndEmail(Guid accountId);
     }
     public class TSUService : ITSUService
     {
         private readonly IHttpClientService _httpClientService;
         private HttpClient LKStudentClient;
+        private HttpClient TSUAccounts;
         public TSUService(IHttpClientService httpClientService)
         {
             _httpClientService = httpClientService;
             LKStudentClient = _httpClientService.InitLKStudentHttpClient();
+            TSUAccounts = _httpClientService.InitTSUAccountsHttpClient();
         }
 
         public async Task<List<TSUStudent>> GetStudents(string groupNumber)
@@ -33,5 +36,21 @@ namespace classroom_api.Services
             }
             throw new BadHttpRequestException("",(int)response.StatusCode);
         }
+        public async Task<TSUNameAndEmail> GetTSUNameAndEmail(Guid accountId)
+        {
+            var uri = "https://accounts.tsu.ru/api/Profile/GetUserModel/?id=" + accountId.ToString();
+            var response = await TSUAccounts.GetAsync(uri);
+            if (response.IsSuccessStatusCode)
+            {
+                var info = await response.Content.ReadFromJsonAsync<TSUNameAndEmail>();
+                if (info == null)
+                {
+                    throw new NullReferenceException("User not found");
+                }
+                return info;
+            }
+            throw new BadHttpRequestException("", (int)response.StatusCode);
+        }
+
     }
 }

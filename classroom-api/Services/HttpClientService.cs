@@ -7,6 +7,7 @@ namespace classroom_api.Services
     {
         public HttpClient InitLKStudentHttpClient();
         public HttpClient InitPersonaTSUHttpClient();
+        public HttpClient InitTSUAccountsHttpClient();
 
     }
     public class HttpClientService : IHttpClientService
@@ -48,6 +49,18 @@ namespace classroom_api.Services
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Basic", basicAuth);
             return client;
+        }
+        public HttpClient InitTSUAccountsHttpClient()
+        {
+            HttpClient TSUAccounts = new HttpClient();
+            string basicAuth = _configuration.GetSection("TSUAccounts:Basic").Value;
+            TSUAccounts.DefaultRequestHeaders.Accept.Clear();
+            TSUAccounts.DefaultRequestHeaders.Add("Host", "accounts.tsu.ru");
+            TSUAccounts.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+            TSUAccounts.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Basic", "YWNjb3VudHM6RXdjemN2MEE/cTkjbzZI");
+            return TSUAccounts;
         }
     }
 }

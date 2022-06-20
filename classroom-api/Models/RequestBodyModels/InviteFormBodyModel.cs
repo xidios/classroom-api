@@ -5,7 +5,7 @@ namespace classroom_api.FromBodyModels
     public class InvitePersonModel
     {
         public Guid CourseId { get; set; }
-        public string AccountId { get; set; }       
+        public Guid AccountId { get; set; }       
     }
 
     public class InviteGroupModel

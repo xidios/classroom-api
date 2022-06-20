@@ -33,7 +33,7 @@ namespace classroom_api.Services
             base.OnModelCreating(modelBuilder);
         }
         public DbSet<CourseModel> Courses { get; set; }
-        public DbSet<StudentModel> Students { get; set; }
+        public DbSet<CourseUserModel> CourseUsers { get; set; }
         public DbSet<InvitationModel> Invitations { get; set; }
         public DbSet<SubdivisionModel> Subdivisions { get; set; }
         public DbSet<UserModel> Users { get; set; }
