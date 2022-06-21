@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using classroom_api.Services;
 
@@ -11,9 +12,10 @@ using classroom_api.Services;
 namespace classroom_api.Migrations
 {
     [DbContext(typeof(ClassroomapiContext))]
-    partial class ClassroomapiContextModelSnapshot : ModelSnapshot
+    [Migration("20220621072028_ClassA")]
+    partial class ClassA
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -53,12 +55,12 @@ namespace classroom_api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("SubdivisionId")
+                    b.Property<Guid?>("SubdivisionModelId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubdivisionId");
+                    b.HasIndex("SubdivisionModelId");
 
                     b.ToTable("Courses");
                 });
@@ -268,11 +270,9 @@ namespace classroom_api.Migrations
 
             modelBuilder.Entity("classroom_api.Models.CourseModel", b =>
                 {
-                    b.HasOne("classroom_api.Models.SubdivisionModel", "Subdivision")
+                    b.HasOne("classroom_api.Models.SubdivisionModel", null)
                         .WithMany("Courses")
-                        .HasForeignKey("SubdivisionId");
-
-                    b.Navigation("Subdivision");
+                        .HasForeignKey("SubdivisionModelId");
                 });
 
             modelBuilder.Entity("classroom_api.Models.EmailModel", b =>

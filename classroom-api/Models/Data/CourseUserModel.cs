@@ -9,6 +9,6 @@ namespace classroom_api.Models
         public string? GoogleId { get; set; }
         public string Email { get; set; }
         public string Name { get; set; }
-        public List<CourseModel> Courses { get; set; } = new List<CourseModel>();
+        public ICollection<InvitationModel> InvitationsToUser { get; set; } = new List<InvitationModel>();
     }
 }

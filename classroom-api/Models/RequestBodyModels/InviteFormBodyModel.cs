@@ -8,6 +8,12 @@ namespace classroom_api.FromBodyModels
         public Guid AccountId { get; set; }       
     }
 
+    public class InviteTeachersModel
+    {
+        public Guid CourseId { get; set; }
+        public List<Guid> AccountIds { get; set; }
+    }
+
     public class InviteGroupModel
     {
         public Guid CourseId { get; set; }

@@ -15,7 +15,8 @@ namespace classroom_api.Models
         public string Status { get; set; } = "OK";
         [Required]
         public string GoogleId { get; set; }
-        public List<CourseUserModel> CourseUsers { get; set; } = new List<CourseUserModel>();
-        public List<InvitationModel> Invations { get; set; } = new List<InvitationModel>();
+        public ICollection<InvitationModel> InvitationsOnCourse { get; set; } = new List<InvitationModel>();
+        public Guid? SubdivisionId { get; set; }
+        public SubdivisionModel? Subdivision { get; set; }
     }
 }

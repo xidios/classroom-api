@@ -83,6 +83,10 @@ namespace classroom_api.Controllers
         [HttpGet("teachers/find/{namePart}")]
         public async Task<ActionResult<List<TSUTeacher>>> GetTeachers(string namePart)
         {
+            if (namePart.Length < 3)
+            {
+                return BadRequest("Name is too short");
+            }
             var uri = TSUSitePaths.PersonaTSUAPIPath + "/FindUsers?namePart=" + namePart;
             var response = await PersonaTSUClient.GetAsync(uri);
             if (response.IsSuccessStatusCode)

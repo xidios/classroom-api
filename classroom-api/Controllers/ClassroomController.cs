@@ -81,6 +81,7 @@ namespace classroom_api.Controllers
                     if (ex.HttpStatusCode == HttpStatusCode.NotFound)
                     {
                         invitation.Status = "NOT FOUND";
+                        _context.Invitations.Remove(invitation);
                     }
                     continue;
                 }
@@ -261,32 +262,33 @@ namespace classroom_api.Controllers
                 return BadRequest("Student id is empty");
             }
             var course = await _context.Courses
-                .Include(c=>c.Invations)
-                .Where(c=>c.Id == model.CourseId).FirstOrDefaultAsync();
-            if(course == null)
+                .Include(c => c.InvitationsOnCourse)
+                .Where(c => c.Id == model.CourseId).FirstOrDefaultAsync();
+            if (course == null)
             {
                 return NotFound("Course not found");
             }
-            var localStudent =await _context.CourseUsers
-                .Where(s=>s.AccountId == model.AccountId).FirstOrDefaultAsync();
-            if(localStudent == null) 
-            {
-                var student = await _TSUService.GetTSUNameAndEmail(model.AccountId);
-                if(student == null)
-                {
-                    return NotFound("Student not found");
-                }
-                localStudent = new CourseUserModel
-                {
-                    AccountId = student.AccountId,
-                    Email = student.Email,
-                    Name = student.FullName,
-                };
-                await _context.AddAsync(localStudent);
-                await _context.SaveChangesAsync();
-            }
+            var localStudent = await _context.CourseUsers
+                .Where(s => s.AccountId == model.AccountId).FirstOrDefaultAsync();
+
             try
             {
+                if (localStudent == null)
+                {
+                    var student = await _TSUService.GetTSUNameAndEmail(model.AccountId);
+                    if (student == null)
+                    {
+                        return NotFound("Student not found");
+                    }
+                    localStudent = new CourseUserModel
+                    {
+                        AccountId = student.AccountId,
+                        Email = student.Email,
+                        Name = student.FullName,
+                    };
+                    await _context.AddAsync(localStudent);
+                    await _context.SaveChangesAsync();
+                }
                 Invitation invite = new Invitation
                 {
                     CourseId = course.GoogleId,
@@ -294,27 +296,22 @@ namespace classroom_api.Controllers
                     Role = "STUDENT"
                 };
                 var inviteResponse = classroomService.Invitations.Create(invite).Execute();
-                var localInvitation =  course.Invations.Where(i => i.AccountId == localStudent.AccountId).FirstOrDefault();
-                if (localInvitation!=null)
-                {                    
-                    course.Invations.Remove(localInvitation);
-                    _context.Remove(localInvitation);
-                    course.CourseUsers.Remove(localStudent);
-                    await _context.SaveChangesAsync();
-                }
+
                 InvitationModel invitationModel = new InvitationModel
                 {
                     CourseId = model.CourseId,
-                    AccountId = localStudent.AccountId,
                     Course = course,
+                    CourseUser = localStudent,
+                    CourseUserId = localStudent.Id,
+                    AccountId = localStudent.AccountId,
                     Email = localStudent.Email,
                     Role = CourseRoleEnum.Student,
                     GoogleInvitationId = inviteResponse.Id
                 };
                 _context.Invitations.Add(invitationModel);
-                localStudent.Courses.Add(course);
-                course.CourseUsers.Add(localStudent);
-                course.Invations.Add(invitationModel);
+                _context.CourseUsers.Add(localStudent);
+                localStudent.InvitationsToUser.Add(invitationModel);
+                course.InvitationsOnCourse.Add(invitationModel);
                 _context.UpdateRange(course, localStudent);
                 await _context.SaveChangesAsync();
 
@@ -325,135 +322,108 @@ namespace classroom_api.Controllers
             {
                 return BadRequest(GoogleApiExceptionReturnMessage(ex));
             }
+            catch (BadHttpRequestException ex)
+            {
+                return StatusCode(ex.StatusCode);
+            }
         }
 
         [HttpPost("invite/teacher")]
-        public async Task<ActionResult<List<InvitationModel>>> InviteTeachers([FromBody] InvitePersonModel model)
+        public async Task<ActionResult<List<InvitationModel>>> InviteTeachers([FromBody] InviteTeachersModel model)
         {
             if (model.CourseId == null)
             {
                 return BadRequest("Course id is empty");
             }
 
-            if (model.AccountId == null)
+            if (model.AccountIds == null && model.AccountIds.Count() == 0)
             {
-                return BadRequest("Teacher id is empty");
+                return BadRequest("Teachers id is empty");
             }
-            var course = await _context.Courses.Where(c => c.Id == model.CourseId).FirstOrDefaultAsync();
+            var course = await _context.Courses
+                .Include(c => c.InvitationsOnCourse)
+                .Where(c => c.Id == model.CourseId).FirstOrDefaultAsync();
             if (course == null)
             {
                 return NotFound("Course not found");
             }
-            var localTeacher = await _context.CourseUsers.Where(s => s.AccountId == model.AccountId).FirstOrDefaultAsync();
-            if (localTeacher == null)
+            List<string> finalResult = new List<string>();
+            foreach (var accountId in model.AccountIds)
             {
-                var student = await _TSUService.GetTSUNameAndEmail(model.AccountId);
-                if (student == null)
+                var localTeacher = await _context.CourseUsers
+                    .Where(s => s.AccountId == accountId).FirstOrDefaultAsync();
+
+                try
                 {
-                    return NotFound("Teacher not found");
+                    if (localTeacher == null)
+                    {
+                        var teacher = await _TSUService.GetTSUNameAndEmail(accountId);
+                        if (teacher == null)
+                        {
+                            finalResult.Add($"{accountId}: Teacher not found");
+                            continue;
+                        }
+                        localTeacher = new CourseUserModel
+                        {
+                            AccountId = teacher.AccountId,
+                            Email = teacher.Email,
+                            Name = teacher.FullName,
+                        };
+                        await _context.AddAsync(localTeacher);
+                        await _context.SaveChangesAsync();
+                    }
+                    Invitation invite = new Invitation
+                    {
+                        CourseId = course.GoogleId,
+                        UserId = localTeacher.Email,
+                        Role = "TEACHER"
+                    };
+                    var inviteResponse = classroomService.Invitations.Create(invite).Execute();
+
+                    InvitationModel invitationModel = new InvitationModel
+                    {
+                        CourseId = model.CourseId,
+                        Course = course,
+                        CourseUser = localTeacher,
+                        CourseUserId = localTeacher.Id,
+                        AccountId = localTeacher.AccountId,
+                        Email = localTeacher.Email,
+                        Role = CourseRoleEnum.Teacher,
+                        GoogleInvitationId = inviteResponse.Id
+                    };
+                    _context.Invitations.Add(invitationModel);
+                    _context.CourseUsers.Add(localTeacher);
+                    localTeacher.InvitationsToUser.Add(invitationModel);
+                    course.InvitationsOnCourse.Add(invitationModel);
+                    _context.UpdateRange(course, localTeacher);
+                    await _context.SaveChangesAsync();
+
+                    finalResult.Add($"{accountId}: Teacher invited");
+                    continue;
+
                 }
-                localTeacher = new CourseUserModel
+                catch (GoogleApiException ex)
+                {                   
+                    finalResult.Add($"{accountId}: {GoogleApiExceptionReturnMessage(ex)}");
+                    continue;
+                }
+                catch (BadHttpRequestException ex)
                 {
-                    AccountId = student.AccountId,
-                    Email = student.Email,
-                    Name = student.FullName,
-                };
-                await _context.AddAsync(localTeacher);
-                await _context.SaveChangesAsync();
+                    finalResult.Add($"{accountId}: {ex.StatusCode}");
+                    continue;
+                }                
             }
-            try
-            {
-                Invitation invite = new Invitation
-                {
-                    CourseId = course.GoogleId,
-                    UserId = localTeacher.Email,
-                    Role = "TEACHER"
-                };
-                var inviteResponse = classroomService.Invitations.Create(invite).Execute();
-
-                InvitationModel invitationModel = new InvitationModel
-                {
-                    CourseId = model.CourseId,
-                    AccountId = localTeacher.AccountId,
-                    Course = course,
-                    Email = localTeacher.Email,
-                    Role = CourseRoleEnum.Teacher,
-                    GoogleInvitationId = inviteResponse.Id
-                };
-                _context.Invitations.Add(invitationModel);
-                localTeacher.Courses.Add(course);
-                course.CourseUsers.Add(localTeacher);
-                course.Invations.Add(invitationModel);
-                _context.UpdateRange(course, localTeacher);
-                await _context.SaveChangesAsync();
-
-                return Ok(invite);
-
-            }
-            catch (GoogleApiException ex)
-            {
-                return BadRequest(GoogleApiExceptionReturnMessage(ex));
-            }
+            return Ok(finalResult);
         }
 
-        //[HttpPost("invite/group")]
-        //public async Task<ActionResult<List<Student>>> InviteGroup([FromBody] InviteGroupModel model)
-        //{
-        //    if (model.AccountIdList.Count() == 0)
-        //    {
-        //        return BadRequest("Id list is empty");
-        //    }
-        //    List<InvitationModel> InvitationsResult = new List<InvitationModel>();
-        //    foreach (var accountId in model.AccountIdList)
-        //    {
-        //        try
-        //        {
-        //            Invitation invite = new Invitation
-        //            {
-        //                CourseId = model.CourseId.ToString(),
-        //                UserId = accountId,
-        //                Role = "STUDENT"
-        //            };
-        //            var inviteResponse = classroomService.Invitations.Create(invite).Execute();
-
-        //            InvitationModel invitationModel = new InvitationModel
-        //            {
-        //                CourseId = model.CourseId,
-        //                Email = accountId,
-        //                Role = "STUDENT",
-        //                GoogleInvitationId = inviteResponse.Id
-        //            };
-        //            _context.Invitations.Add(invitationModel);
-        //            await _context.SaveChangesAsync();
-
-        //            InvitationsResult.Add(invitationModel);
-
-        //        }
-        //        catch (GoogleApiException ex)
-        //        {
-        //            string errorException = GoogleApiExceptionReturnMessage(ex);
-        //            InvitationsResult.Add(new InvitationModel
-        //            {
-        //                CourseId = model.CourseId,
-        //                Email = accountId,
-        //                GoogleInvitationId = errorException,
-        //                Role = errorException,
-        //                Status = errorException
-        //            });
-        //            continue;
-        //        }
-        //    }
-        //    return Ok(InvitationsResult);
-        //}
 
         [HttpPost("invite/group")]
         public async Task<ActionResult<List<string>>> InviteGroup(string groupNumber, Guid courseId)
         {
             var course = await _context.Courses
-                .Include(c => c.CourseUsers)
-                .Include(c=>c.Invations)
+                .Include(c => c.InvitationsOnCourse)
                 .Where(c => c.Id == courseId).FirstOrDefaultAsync();
-            
+
 
             if (course == null)
             {
@@ -485,15 +455,15 @@ namespace classroom_api.Controllers
             {
                 try
                 {
-                    if(student.Status == 2) // отчислен
+                    if (student.Status == 2) // отчислен
                     {
                         continue;
                     }
-                    if (course.CourseUsers.Any(s => s.AccountId == student.AccountId) && course.Invations.Any(i=>i.AccountId == student.AccountId && i.Status == "OK"))
-                    {
-                        InvitationsResult.Add($"{student.AccountId}: already invited");
-                        continue;
-                    }
+                    //if (course.InvitationsOnCourse.Any(i=>i.AccountId == student.AccountId && i.Status == "OK"))
+                    //{
+                    //    InvitationsResult.Add($"{student.AccountId}: already invited");
+                    //    continue;
+                    //}
                     Invitation invite = new Invitation
                     {
                         CourseId = course.GoogleId,
@@ -502,15 +472,7 @@ namespace classroom_api.Controllers
                     };
                     var inviteResponse = classroomService.Invitations.Create(invite).Execute();
 
-                    InvitationModel invitationModel = new InvitationModel
-                    {
-                        CourseId = courseId,
-                        Course = course,
-                        Email = student.Email,
-                        Role = CourseRoleEnum.Student,
-                        GoogleInvitationId = inviteResponse.Id,
-                        AccountId = student.AccountId
-                    };
+
                     var currentStudent = allStudents.Where(s => s.AccountId == student.AccountId).FirstOrDefault();
                     if (currentStudent == null)
                     {
@@ -519,16 +481,27 @@ namespace classroom_api.Controllers
                             AccountId = student.AccountId,
                             Email = student.Email,
                             Name = student.LastName + " " + student.FirstName + " " + student.Patronymic
-                            
+
                         };
                         _context.CourseUsers.Add(currentStudent);
                         await _context.SaveChangesAsync();
                     }
-                    currentStudent.Courses.Add(course);
+                    InvitationModel invitationModel = new InvitationModel
+                    {
+                        CourseId = courseId,
+                        Course = course,
+                        Email = student.Email,
+                        Role = CourseRoleEnum.Student,
+                        GoogleInvitationId = inviteResponse.Id,
+                        AccountId = student.AccountId,
+                        CourseUser = currentStudent,
+                        CourseUserId = currentStudent.Id,
+                        Status = "INVITED"
+                    };
                     _context.Invitations.Add(invitationModel);
                     _context.CourseUsers.Add(currentStudent);
-                    course.CourseUsers.Add(currentStudent);
-                    course.Invations.Add(invitationModel);
+                    currentStudent.InvitationsToUser.Add(invitationModel);
+                    course.InvitationsOnCourse.Add(invitationModel);
                     _context.UpdateRange(course, currentStudent);
                     await _context.SaveChangesAsync();
                     InvitationsResult.Add($"{student.AccountId}: invited");
