@@ -13,6 +13,7 @@ namespace classroom_api.Models
         public string Email { get; set; }
         public CourseRoleEnum Role { get; set; }
         public string Status { get; set; } = "OK";
+        public DateTime Created { get; set; }
         public string GoogleInvitationId { get; set; }
     }
 }

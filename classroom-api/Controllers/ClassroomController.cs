@@ -306,7 +306,8 @@ namespace classroom_api.Controllers
                     AccountId = localStudent.AccountId,
                     Email = localStudent.Email,
                     Role = CourseRoleEnum.Student,
-                    GoogleInvitationId = inviteResponse.Id
+                    GoogleInvitationId = inviteResponse.Id,
+                    Created = DateTime.UtcNow
                 };
                 _context.Invitations.Add(invitationModel);
                 _context.CourseUsers.Add(localStudent);
@@ -389,7 +390,8 @@ namespace classroom_api.Controllers
                         AccountId = localTeacher.AccountId,
                         Email = localTeacher.Email,
                         Role = CourseRoleEnum.Teacher,
-                        GoogleInvitationId = inviteResponse.Id
+                        GoogleInvitationId = inviteResponse.Id,
+                        Created = DateTime.Now
                     };
                     _context.Invitations.Add(invitationModel);
                     _context.CourseUsers.Add(localTeacher);
@@ -434,17 +436,18 @@ namespace classroom_api.Controllers
 
             try
             {
-                var kek = new TSUStudent
-                {
-                    AccountId = Guid.Parse("f43c6ea0-b2a2-48a7-91bc-1334b0cd3312"),
-                    Email = "redbull-18@bk.ru",
-                    FirstName = "Prisyach",
-                    LastName = "Vladimir",
-                    Patronymic = "Olegovich",
-                    Status = 0
-                };
-                //students = await _TSUService.GetStudents(groupNumber);
-                students = new List<TSUStudent>() { kek };
+                //var kek = new TSUStudent
+                //{
+                //    AccountId = Guid.Parse("f43c6ea0-b2a2-48a7-91bc-1334b0cd3312"),
+                //    Email = "redbull-181@bk.ru",
+                //    FirstName = "Prisyach",
+                //    LastName = "Vladimir",
+                //    Patronymic = "Olegovich",
+                //    Status = 0
+                //};
+                //students = new List<TSUStudent>() { kek };
+                students = await _TSUService.GetStudents(groupNumber);
+
             }
             catch (NullReferenceException ex)
             {
@@ -459,11 +462,6 @@ namespace classroom_api.Controllers
                     {
                         continue;
                     }
-                    //if (course.InvitationsOnCourse.Any(i=>i.AccountId == student.AccountId && i.Status == "OK"))
-                    //{
-                    //    InvitationsResult.Add($"{student.AccountId}: already invited");
-                    //    continue;
-                    //}
                     Invitation invite = new Invitation
                     {
                         CourseId = course.GoogleId,
@@ -496,7 +494,8 @@ namespace classroom_api.Controllers
                         AccountId = student.AccountId,
                         CourseUser = currentStudent,
                         CourseUserId = currentStudent.Id,
-                        Status = "INVITED"
+                        Status = "INVITED",
+                        Created = DateTime.Now
                     };
                     _context.Invitations.Add(invitationModel);
                     _context.CourseUsers.Add(currentStudent);
